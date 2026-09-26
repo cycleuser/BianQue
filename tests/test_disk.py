@@ -1,6 +1,6 @@
 import os
 
-from juzi.core import disk
+from bianque.core import disk
 
 
 def test_run_disk_benchmark():
@@ -16,7 +16,7 @@ def test_run_disk_benchmark_cleans_up():
     tmpdir = tempfile.mkdtemp()
     result = disk.run_disk_benchmark(path=tmpdir, size_mb=1.0)
     assert result.error is None
-    leftovers = [f for f in os.listdir(tmpdir) if f.startswith("juzi_bench_")]
+    leftovers = [f for f in os.listdir(tmpdir) if f.startswith("bianque_bench_")]
     assert leftovers == []
 
 

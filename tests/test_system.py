@@ -1,4 +1,4 @@
-from juzi.core import system
+from bianque.core import system
 
 
 def test_os_info():

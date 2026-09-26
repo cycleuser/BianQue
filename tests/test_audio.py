@@ -3,7 +3,7 @@ import wave
 
 import numpy as np
 
-from juzi.core import audio
+from bianque.core import audio
 
 
 def test_generate_tone_shape_and_range():

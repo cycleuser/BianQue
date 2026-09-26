@@ -1,13 +1,15 @@
-# JuZi (巨子) · Cross-Platform Hardware Inspection
+# BianQue (扁鹊) · Cross-Platform Hardware Inspection
 
-> 鲁班造器，巨子验器 — "Lu Ban builds tools; JuZi inspects them."
+> 望闻问切 — a full checkup for your hardware.
 
-**JuZi** is a pure-Python hardware inspection & burn-in workflow. Run a new
+**BianQue** is a pure-Python hardware inspection & burn-in workflow. Run a new
 machine end-to-end — screen, camera, microphone, speaker, keyboard, mouse,
 thermal, battery, disk, memory, network — and export an archivable report.
 
-Named after the Mohist "JuZi" (chief of the Mohists): if Lu Ban was the master
-craftsman, the JuZi was the master *inspector*.
+Named after Bian Que, the legendary physician of the Warring States period, whose
+four diagnostic methods (望闻问切 — observe, listen, inquire, palpate) map neatly
+onto hardware inspection: observe (screen, camera), listen (speaker, microphone),
+inquire (hardware info), palpate (thermal stress).
 
 ## Features
 
@@ -38,8 +40,8 @@ Requires Python ≥ 3.10. Dependencies: PySide6, psutil, numpy, sounddevice.
 ## Usage
 
 ```bash
-juzi          # launch the GUI
-juzi-gui      # same (GUI script)
+bianque          # launch the GUI
+bianque-gui      # same (GUI script)
 ```
 
 Work through the left navigation; every page has explicit start/confirm
@@ -56,7 +58,7 @@ page.
 | Battery cycles / health | ✅ (`system_profiler`) | ✅ (`wmic`) | ✅ (`upower`) |
 | CPU temperature / fan speed | ⚠️ needs SMC | ✅ (WMI) | ✅ (`psutil`) |
 
-On macOS, temperature/fan reads are restricted by the OS; JuZi degrades
+On macOS, temperature/fan reads are restricted by the OS; BianQue degrades
 gracefully and judges thermals from frequency/usage during the stress test.
 
 ## Development
@@ -65,7 +67,7 @@ gracefully and judges thermals from frequency/usage during the stress test.
 pip install -e ".[dev]"
 pytest                # all tests
 ruff check .          # lint
-mypy juzi             # type check
+mypy bianque             # type check
 ```
 
 ## License

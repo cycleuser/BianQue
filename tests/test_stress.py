@@ -1,4 +1,4 @@
-from juzi.core import stress
+from bianque.core import stress
 
 
 def test_run_cpu_stress_completes():

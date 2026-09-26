@@ -2,8 +2,8 @@
 
 import pytest
 
-from juzi.ui.main_window import MainWindow
-from juzi.ui.pages.base import BasePage
+from bianque.ui.main_window import MainWindow
+from bianque.ui.pages.base import BasePage
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def window(qtbot):
 def test_main_window_assembles(window):
     assert window.nav.count() == 13
     assert window.stack.count() == 13
-    assert window.windowTitle().startswith("JuZi")
+    assert window.windowTitle().startswith("BianQue")
 
 
 def test_navigation_switches_pages(window, qtbot):
@@ -33,7 +33,7 @@ def test_pages_are_base_pages(window):
 
 
 def test_report_dedup_by_key(window):
-    from juzi.core.models import CheckResult, Status
+    from bianque.core.models import CheckResult, Status
 
     window._on_result(CheckResult(key="k", name="a", status=Status.UNKNOWN))
     window._on_result(CheckResult(key="k", name="a", status=Status.PASS))
@@ -42,7 +42,7 @@ def test_report_dedup_by_key(window):
 
 
 def test_report_page_refresh(window):
-    from juzi.core.models import CheckResult, Status
+    from bianque.core.models import CheckResult, Status
 
     window.report.results = [
         CheckResult(key="x", name="测试", status=Status.PASS, message="好"),

@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 @pytest.fixture
 def sample_report():
-    from juzi.core.models import CheckResult, Report, Status
+    from bianque.core.models import CheckResult, Report, Status
 
     report = Report(host="test-host", platform="test-platform")
     report.add(CheckResult(key="a", name="检查A", status=Status.PASS, message="ok"))

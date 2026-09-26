@@ -1,8 +1,8 @@
 import json
 import os
 
-from juzi.core import report
-from juzi.core.models import Status
+from bianque.core import report
+from bianque.core.models import Status
 
 
 def test_format_bytes():
@@ -27,7 +27,7 @@ def test_render_markdown(sample_report):
 
 def test_render_html(sample_report):
     html = report.render_html(sample_report)
-    assert "JuZi" in html
+    assert "BianQue" in html
     assert "检查A" in html
 
 

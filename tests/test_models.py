@@ -1,4 +1,4 @@
-from juzi.core.models import CheckResult, Report, Status
+from bianque.core.models import CheckResult, Report, Status
 
 
 def test_status_all():

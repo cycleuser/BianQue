@@ -1,6 +1,6 @@
 import pytest
 
-from juzi.core import network
+from bianque.core import network
 
 
 def test_get_network_info():

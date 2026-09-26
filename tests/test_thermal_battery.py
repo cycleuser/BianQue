@@ -1,4 +1,4 @@
-from juzi.core import battery, thermal
+from bianque.core import battery, thermal
 
 
 def test_get_battery_info_structure():

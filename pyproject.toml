@@ -3,20 +3,20 @@ requires = ["setuptools>=77.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "juzi"
+name = "bianque"
 dynamic = ["version"]
-description = "JuZi(巨子) - cross-platform hardware inspection & burn-in workflow: screen, camera, microphone, speaker, keyboard, mouse, thermal, battery, disk, memory, network"
+description = "BianQue(扁鹊) - cross-platform hardware inspection & burn-in workflow: screen, camera, microphone, speaker, keyboard, mouse, thermal, battery, disk, memory, network"
 readme = "README_CN.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.10"
 authors = [
-    { name = "JuZi Contributors" },
+    { name = "BianQue Contributors" },
 ]
 keywords = [
     "hardware", "inspection", "burn-in", "screen", "dead-pixel",
     "camera", "microphone", "speaker", "keyboard", "thermal",
     "battery", "disk", "memory", "network", "benchmark", "gui",
-    "pyside6", "验机", "巨子", "墨家",
+    "pyside6", "验机", "扁鹊", "体检",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -55,24 +55,24 @@ dev = [
 ]
 
 [project.scripts]
-juzi = "juzi.app:main"
+bianque = "bianque.app:main"
 
 [project.gui-scripts]
-juzi-gui = "juzi.app:main"
+bianque-gui = "bianque.app:main"
 
 [project.urls]
-Homepage = "https://github.com/cycleuser/JuZi"
-Repository = "https://github.com/cycleuser/JuZi"
-Issues = "https://github.com/cycleuser/JuZi/issues"
+Homepage = "https://github.com/cycleuser/BianQue"
+Repository = "https://github.com/cycleuser/BianQue"
+Issues = "https://github.com/cycleuser/BianQue/issues"
 
 [tool.setuptools.dynamic]
-version = { attr = "juzi.__version__" }
+version = { attr = "bianque.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["juzi*"]
+include = ["bianque*"]
 
 [tool.setuptools.package-data]
-juzi = ["py.typed"]
+bianque = ["py.typed"]
 
 [tool.ruff]
 line-length = 100
@@ -124,7 +124,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-source = ["juzi"]
+source = ["bianque"]
 omit = ["*/tests/*", "*/__main__.py"]
 
 [tool.coverage.report]
