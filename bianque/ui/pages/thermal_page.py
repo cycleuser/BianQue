@@ -15,25 +15,26 @@ from PySide6.QtWidgets import (
 
 from bianque.core import stress, thermal
 from bianque.core.report import format_duration
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 from bianque.ui.worker import Task
 
 
 class ThermalPage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("散热/压力检测", "对 CPU 加压并观察占用率、频率与温度，判断散热是否正常", parent)
+        super().__init__("Thermal", "Stress the CPU and watch usage, frequency and temperature", parent)
         self._task: Task | None = None
         self._temps_before: list[dict] = []
 
-        self.content.addWidget(QLabel("压力测试时长（秒）："))
+        self.content.addWidget(QLabel(tr("Stress duration (s)") + ":"))
         row = QHBoxLayout()
         self.duration = QDoubleSpinBox()
         self.duration.setRange(5.0, 300.0)
         self.duration.setValue(15.0)
-        self.duration.setSuffix(" 秒")
+        self.duration.setSuffix(" s")
         row.addWidget(self.duration)
 
-        self.start_btn = QPushButton("开始压力测试")
+        self.start_btn = QPushButton(tr("Start Stress Test"))
         self.start_btn.setObjectName("primary")
         self.start_btn.clicked.connect(self._start)
         row.addWidget(self.start_btn)
@@ -63,19 +64,16 @@ class ThermalPage(BasePage):
         temps = thermal.get_temperatures()
         fans = thermal.get_fan_speeds()
         if not thermal.thermal_supported():
-            self.sensor_lbl.setText(
-                "当前平台不支持直接读取 CPU 温度/风扇转速（macOS 需要 SMC 权限）。"
-                "将依据压力测试中的频率与占用率判断散热。"
-            )
+            self.sensor_lbl.setText(tr("No temperature access on this platform"))
         else:
             t_str = "  ".join(f"{t['label']}:{t['current']}°C" for t in temps)
             f_str = "  ".join(f"{f['label']}:{f['current']}RPM" for f in fans)
-            self.sensor_lbl.setText(f"温度：{t_str or '无'}    风扇：{f_str or '无'}")
+            self.sensor_lbl.setText(f"{tr('Temperature')}: {t_str or tr('None')}    {tr('Fans')}: {f_str or tr('None')}")
         self.report(
             "thermal.sensors",
-            "温度传感器",
+            "Temperature Sensors",
             "pass" if temps else "unknown",
-            f"检测到 {len(temps)} 个温度传感器" if temps else "无法读取温度传感器",
+            tr("Detected {0} temperature sensors", len(temps)) if temps else tr("Cannot read temperature sensors"),
             {"temperatures": temps, "fans": fans},
         )
 
@@ -83,7 +81,7 @@ class ThermalPage(BasePage):
         self._temps_before = thermal.get_temperatures()
         self.start_btn.setEnabled(False)
         self.progress.setValue(0)
-        self.result_lbl.setText("正在加压…")
+        self.result_lbl.setText(tr("Stress running…"))
         duration = self.duration.value()
         self._task = Task(
             lambda progress, stop_event: stress.run_cpu_stress(
@@ -99,12 +97,12 @@ class ThermalPage(BasePage):
 
     def _on_progress(self, fraction: float, cpu_percent: float) -> None:
         self.progress.setValue(int(fraction * 100))
-        self.live_lbl.setText(f"CPU 占用：{cpu_percent:.0f}%")
+        self.live_lbl.setText(tr("CPU usage: {0}%", f"{cpu_percent:.0f}"))
 
     def _on_error(self, message: str) -> None:
         self.start_btn.setEnabled(True)
-        self.result_lbl.setText(f"压力测试出错：{message}")
-        self.mark_unknown("thermal.stress", "压力测试", message)
+        self.result_lbl.setText(f"{tr('Stress failed')}: {message}")
+        self.mark_unknown("thermal.stress", "Stress Test", message)
 
     def _on_done(self, result: Any) -> None:
         self.start_btn.setEnabled(True)
@@ -117,12 +115,12 @@ class ThermalPage(BasePage):
             freq_drop = r.freq_max_mhz - r.freq_min_mhz
 
         lines = [
-            f"持续 {format_duration(r.duration)}，{r.threads} 线程",
-            f"平均占用 {r.avg_usage:.0f}%，峰值 {r.peak_usage:.0f}%",
-            f"频率：起始 {r.freq_before_mhz} MHz → 结束 {r.freq_after_mhz} MHz",
+            tr("Duration {0}, {1} threads", format_duration(r.duration), r.threads),
+            tr("Avg usage {0}%, peak {1}%", f"{r.avg_usage:.0f}", f"{r.peak_usage:.0f}"),
+            tr("Frequency {0} → {1} MHz", r.freq_before_mhz, r.freq_after_mhz),
         ]
         if freq_drop is not None:
-            lines.append(f"频率波动 {freq_drop:.0f} MHz")
+            lines.append(tr("Frequency variation {0} MHz", f"{freq_drop:.0f}"))
         self.result_lbl.setText("\n".join(lines))
 
         data = {
@@ -134,18 +132,18 @@ class ThermalPage(BasePage):
         }
 
         if not r.completed:
-            self.mark_unknown("thermal.stress", "压力测试", "压力测试被中断", data)
+            self.mark_unknown("thermal.stress", "Stress Test", tr("Stress interrupted"), data)
         elif freq_drop is not None and freq_drop > 500:
             self.mark_fail(
                 "thermal.stress",
-                "压力测试",
-                f"压力测试期间频率下降 {freq_drop:.0f} MHz，可能出现过热降频",
+                "Stress Test",
+                tr("Frequency dropped {0} MHz under load, possible throttling", f"{freq_drop:.0f}"),
                 data,
             )
         else:
             self.mark_pass(
                 "thermal.stress",
-                "压力测试",
-                f"满载稳定，峰值占用 {r.peak_usage:.0f}%，无异常降频",
+                "Stress Test",
+                tr("Stable under full load, peak {0}%, no throttling", f"{r.peak_usage:.0f}"),
                 data,
             )

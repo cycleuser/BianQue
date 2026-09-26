@@ -7,12 +7,13 @@ import html
 import json
 
 from bianque.core.models import Report, Status
+from bianque.i18n import tr
 
-_STATUS_LABEL = {
-    Status.PASS: "通过",
-    Status.FAIL: "失败",
-    Status.UNKNOWN: "未知",
-    Status.SKIPPED: "跳过",
+_STATUS_KEY = {
+    Status.PASS: "Pass",
+    Status.FAIL: "Fail",
+    Status.UNKNOWN: "Unknown",
+    Status.SKIPPED: "Skipped",
 }
 
 _STATUS_COLOR = {
@@ -21,6 +22,10 @@ _STATUS_COLOR = {
     Status.UNKNOWN: "#d97706",
     Status.SKIPPED: "#9ca3af",
 }
+
+
+def _status_label(status: str) -> str:
+    return tr(_STATUS_KEY.get(status, status))
 
 
 def format_bytes(num: float | None) -> str:
@@ -57,24 +62,24 @@ def render_json(report: Report) -> str:
 
 def render_markdown(report: Report) -> str:
     lines: list[str] = []
-    lines.append("# BianQue(扁鹊) 验机报告")
+    lines.append(f"# BianQue(扁鹊) {tr('Inspection Report')}")
     lines.append("")
-    lines.append(f"- 生成时间: {format_timestamp(report.generated_at)}")
-    lines.append(f"- 主机: {report.host}")
-    lines.append(f"- 平台: {report.platform}")
+    lines.append(f"- {tr('Generated at')}: {format_timestamp(report.generated_at)}")
+    lines.append(f"- {tr('Host')}: {report.host}")
+    lines.append(f"- {tr('Platform')}: {report.platform}")
     lines.append("")
     counts = report.count_by_status()
-    lines.append("## 结果总览")
+    lines.append(f"## {tr('Summary')}")
     lines.append("")
-    lines.append(f"- 通过: {counts[Status.PASS]}")
-    lines.append(f"- 失败: {counts[Status.FAIL]}")
-    lines.append(f"- 未知: {counts[Status.UNKNOWN]}")
-    lines.append(f"- 跳过: {counts[Status.SKIPPED]}")
+    lines.append(f"- {tr('Pass')}: {counts[Status.PASS]}")
+    lines.append(f"- {tr('Fail')}: {counts[Status.FAIL]}")
+    lines.append(f"- {tr('Unknown')}: {counts[Status.UNKNOWN]}")
+    lines.append(f"- {tr('Skipped')}: {counts[Status.SKIPPED]}")
     lines.append("")
-    lines.append("## 检测明细")
+    lines.append(f"## {tr('Details')}")
     lines.append("")
     for r in report.results:
-        lines.append(f"### {r.name} — {_STATUS_LABEL.get(r.status, r.status)}")
+        lines.append(f"### {tr(r.name)} — {_status_label(r.status)}")
         lines.append("")
         if r.message:
             lines.append(r.message)
@@ -92,12 +97,12 @@ def render_html(report: Report) -> str:
     rows = []
     for r in report.results:
         color = _STATUS_COLOR.get(r.status, "#9ca3af")
-        label = _STATUS_LABEL.get(r.status, r.status)
+        label = _status_label(r.status)
         data_str = html.escape(json.dumps(r.data, ensure_ascii=False)) if r.data else ""
         rows.append(
             f"""
             <tr>
-              <td>{html.escape(r.name)}</td>
+              <td>{html.escape(tr(r.name))}</td>
               <td><span class="badge" style="background:{color}">{label}</span></td>
               <td>{html.escape(r.message)}</td>
               <td><pre>{data_str}</pre></td>
@@ -108,7 +113,7 @@ def render_html(report: Report) -> str:
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>BianQue 验机报告</title>
+<title>BianQue {tr('Inspection Report')}</title>
 <style>
   body {{ font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
           max-width: 1000px; margin: 2rem auto; padding: 0 1rem; color: #1f2937; }}
@@ -124,20 +129,20 @@ def render_html(report: Report) -> str:
 </style>
 </head>
 <body>
-<h1>BianQue(扁鹊) 验机报告</h1>
+<h1>BianQue(扁鹊) {tr('Inspection Report')}</h1>
 <p class="meta">
-  生成时间: {html.escape(format_timestamp(report.generated_at))} ·
-  主机: {html.escape(report.host)} ·
-  平台: {html.escape(report.platform)}
+  {tr('Generated at')}: {html.escape(format_timestamp(report.generated_at))} ·
+  {tr('Host')}: {html.escape(report.host)} ·
+  {tr('Platform')}: {html.escape(report.platform)}
 </p>
 <div class="summary">
-  <div>通过 <b style="color:#16a34a">{counts[Status.PASS]}</b></div>
-  <div>失败 <b style="color:#dc2626">{counts[Status.FAIL]}</b></div>
-  <div>未知 <b style="color:#d97706">{counts[Status.UNKNOWN]}</b></div>
-  <div>跳过 <b style="color:#9ca3af">{counts[Status.SKIPPED]}</b></div>
+  <div>{tr('Pass')} <b style="color:#16a34a">{counts[Status.PASS]}</b></div>
+  <div>{tr('Fail')} <b style="color:#dc2626">{counts[Status.FAIL]}</b></div>
+  <div>{tr('Unknown')} <b style="color:#d97706">{counts[Status.UNKNOWN]}</b></div>
+  <div>{tr('Skipped')} <b style="color:#9ca3af">{counts[Status.SKIPPED]}</b></div>
 </div>
 <table>
-  <thead><tr><th>检测项</th><th>状态</th><th>结果</th><th>数据</th></tr></thead>
+  <thead><tr><th>{tr('Check Item')}</th><th>{tr('Status')}</th><th>{tr('Result')}</th><th>{tr('Data')}</th></tr></thead>
   <tbody>{''.join(rows)}</tbody>
 </table>
 </body>

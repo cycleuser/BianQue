@@ -1,4 +1,4 @@
-"""Main window: left navigation + stacked inspection pages."""
+"""Main window: left navigation + stacked inspection pages + language menu."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import platform
 import socket
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QListWidget,
@@ -15,7 +16,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from bianque.core.models import CheckResult, Report
+from bianque.core.models import CheckResult, Report, Status
+from bianque.i18n import (
+    available_languages,
+    get_language,
+    language_changed_signal,
+    set_language,
+    tr,
+)
 from bianque.ui.pages.base import BasePage
 from bianque.ui.pages.battery_page import BatteryPage
 from bianque.ui.pages.camera_page import CameraPage
@@ -47,9 +55,10 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setFixedWidth(200)
         self.stack = QStackedWidget()
+        self._lang_actions: dict[str, QAction] = {}
 
-        for page in self._build_pages():
-            self._add_page(page)
+        self._build_language_menu()
+        self._populate_pages()
 
         self.nav.currentRowChanged.connect(self.stack.setCurrentIndex)
         self.nav.setCurrentRow(0)
@@ -62,7 +71,40 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.stack, 1)
         self.setCentralWidget(central)
 
-        self.statusBar().showMessage("就绪")
+        self._update_status_bar()
+
+    def _build_language_menu(self) -> None:
+        menu = self.menuBar().addMenu(tr("Language"))
+        group = QActionGroup(self)
+        group.setExclusive(True)
+        for code, name in available_languages():
+            action = QAction(name, self, checkable=True)
+            action.setChecked(code == get_language())
+            action.triggered.connect(lambda _checked=False, c=code: self._switch_language(c))
+            group.addAction(action)
+            menu.addAction(action)
+            self._lang_actions[code] = action
+        language_changed_signal().connect(self._on_language_changed)
+
+    def _switch_language(self, code: str) -> None:
+        set_language(code)
+
+    def _on_language_changed(self, code: str) -> None:
+        for lang, action in self._lang_actions.items():
+            action.setChecked(lang == code)
+        self._populate_pages()
+        self._update_status_bar()
+
+    def _populate_pages(self) -> None:
+        self.nav.clear()
+        while self.stack.count():
+            widget = self.stack.widget(0)
+            if widget is not None:
+                self.stack.removeWidget(widget)
+                widget.deleteLater()
+        for page in self._build_pages():
+            self._add_page(page)
+        self.nav.setCurrentRow(0)
 
     def _build_pages(self) -> list[BasePage]:
         return [
@@ -95,11 +137,9 @@ class MainWindow(QMainWindow):
 
     def _update_status_bar(self) -> None:
         counts = self.report.count_by_status()
-        from bianque.core.models import Status
-
         self.statusBar().showMessage(
-            f"通过 {counts[Status.PASS]}  ·  "
-            f"失败 {counts[Status.FAIL]}  ·  "
-            f"未知 {counts[Status.UNKNOWN]}  ·  "
-            f"跳过 {counts[Status.SKIPPED]}"
+            f"{tr('Pass')} {counts[Status.PASS]}  ·  "
+            f"{tr('Fail')} {counts[Status.FAIL]}  ·  "
+            f"{tr('Unknown')} {counts[Status.UNKNOWN]}  ·  "
+            f"{tr('Skipped')} {counts[Status.SKIPPED]}"
         )

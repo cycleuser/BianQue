@@ -11,8 +11,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from bianque.core import memory as memory_core
 from bianque.core import system
 from bianque.core.report import format_bytes
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 from bianque.ui.widgets.common import info_box
 from bianque.ui.worker import Task
@@ -20,10 +22,10 @@ from bianque.ui.worker import Task
 
 class OverviewPage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("硬件总览", "自动采集本机硬件信息（CPU / 内存 / 磁盘 / GPU / 主板）", parent)
+        super().__init__("Overview", "Auto-detect hardware info (CPU / memory / disk / GPU / board)", parent)
         self._task: Task | None = None
 
-        self.refresh_btn = QPushButton("重新采集")
+        self.refresh_btn = QPushButton(tr("Rescan"))
         self.refresh_btn.clicked.connect(self.refresh)
         self.content.addWidget(self.refresh_btn, stretch=0)
 
@@ -40,12 +42,15 @@ class OverviewPage(BasePage):
 
     def refresh(self) -> None:
         self._clear_boxes()
-        self._lay.addWidget(QLabel("正在采集硬件信息…"))
+        self._lay.addWidget(QLabel(tr("Scanning hardware…")))
         self.refresh_btn.setEnabled(False)
-        self._task = Task(lambda progress, stop_event: system.get_system_snapshot())
+        self._task = Task(self._collect)
         self._task.signals.finished.connect(self._on_snapshot)
         self._task.signals.error.connect(self._on_error)
         self._task.start()
+
+    def _collect(self, progress, stop_event) -> tuple[dict, dict]:
+        return system.get_system_snapshot(), memory_core.get_memory_details()
 
     def _clear_boxes(self) -> None:
         while self._lay.count():
@@ -57,11 +62,12 @@ class OverviewPage(BasePage):
 
     def _on_error(self, message: str) -> None:
         self._clear_boxes()
-        self._lay.addWidget(QLabel(f"采集失败：{message}"))
+        self._lay.addWidget(QLabel(f"{tr('Scan failed')}: {message}"))
         self.refresh_btn.setEnabled(True)
-        self.mark_unknown("overview.system", "硬件总览", message)
+        self.mark_unknown("overview.system", "Overview", message)
 
-    def _on_snapshot(self, snap: dict) -> None:
+    def _on_snapshot(self, result: tuple[dict, dict]) -> None:
+        snap, mem_detail = result
         self._clear_boxes()
         os_info = snap["os"]
         cpu = snap["cpu"]
@@ -70,84 +76,111 @@ class OverviewPage(BasePage):
 
         self._lay.addWidget(
             info_box(
-                "系统",
+                tr("System"),
                 [
-                    ("系统", f"{os_info['system']} {os_info['release']}"),
-                    ("架构", os_info["machine"]),
-                    ("主机名", os_info["hostname"]),
-                    ("Python", os_info["python"]),
+                    (tr("System"), f"{os_info['system']} {os_info['release']}"),
+                    (tr("Architecture"), os_info["machine"]),
+                    (tr("Hostname"), os_info["hostname"]),
+                    (tr("Python"), os_info["python"]),
                 ],
             )
         )
         if board:
-            board_items = [
-                ("型号", board.get("model")),
-                ("芯片", board.get("chip")),
-                ("序列号", board.get("serial")),
-            ]
-            self._lay.addWidget(info_box("主板", board_items))
-
-        self._lay.addWidget(
-            info_box(
-                "CPU",
-                [
-                    ("型号", cpu["brand"]),
-                    ("物理核心", cpu["physical_cores"]),
-                    ("逻辑核心", cpu["logical_cores"]),
-                    ("当前频率", f"{cpu['freq_current_mhz']} MHz" if cpu["freq_current_mhz"] else "N/A"),
-                    ("最大频率", f"{cpu['freq_max_mhz']} MHz" if cpu["freq_max_mhz"] else "N/A"),
-                ],
-            )
-        )
-        self._lay.addWidget(
-            info_box(
-                "内存",
-                [
-                    ("总容量", format_bytes(mem["total_bytes"])),
-                    ("可用", format_bytes(mem["available_bytes"])),
-                    ("使用率", f"{mem['percent']}%"),
-                    ("Swap", format_bytes(mem["swap_total_bytes"])),
-                ],
-            )
-        )
-
-        for i, gpu in enumerate(snap.get("gpu", []), start=1):
             self._lay.addWidget(
                 info_box(
-                    f"GPU {i}",
+                    tr("Board"),
                     [
-                        ("型号", gpu.get("name")),
-                        ("厂商", gpu.get("vendor")),
-                        ("显存", gpu.get("vram")),
+                        (tr("Model"), board.get("model")),
+                        (tr("Chip"), board.get("chip")),
+                        (tr("Serial Number"), board.get("serial")),
                     ],
                 )
             )
+
+        cpu_items = [
+            (tr("Model"), cpu["brand"]),
+            (tr("Physical Cores"), cpu["physical_cores"]),
+            (tr("Logical Cores"), cpu["logical_cores"]),
+            (tr("Current Frequency"), f"{cpu['freq_current_mhz']:.0f} MHz" if cpu["freq_current_mhz"] else "N/A"),
+            (tr("Max Frequency"), f"{cpu['freq_max_mhz']:.0f} MHz" if cpu["freq_max_mhz"] else "N/A"),
+        ]
+        for level in cpu.get("perf_levels") or []:
+            label = tr(level.get("name") or "Core")
+            cpu_items.append((label, level.get("cores")))
+        cache = cpu.get("cache") or {}
+        if cache:
+            parts = []
+            for k in ("l1i", "l1d", "l2", "l3"):
+                if cache.get(k):
+                    parts.append(f"{k.upper()}: {format_bytes(cache[k])}")
+            cpu_items.append((tr("Cache"), "  ".join(parts)))
+        if cpu.get("per_core_usage"):
+            usage = "  ".join(f"{u:.0f}%" for u in cpu["per_core_usage"])
+            cpu_items.append((tr("Per-core Usage"), usage))
+        self._lay.addWidget(info_box(tr("CPU"), cpu_items))
+
+        mem_items = [
+            (tr("Total"), format_bytes(mem["total_bytes"])),
+            (tr("Available"), format_bytes(mem["available_bytes"])),
+            (tr("Usage"), f"{mem['percent']}%"),
+            (tr("Swap"), format_bytes(mem["swap_total_bytes"])),
+        ]
+        if mem_detail.get("channels"):
+            mem_items.append((tr("Channels"), mem_detail["channels"]))
+        if mem_detail.get("bandwidth_gbps"):
+            mem_items.append((tr("Bandwidth"), f"{mem_detail['bandwidth_gbps']} GB/s"))
+        self._lay.addWidget(info_box(tr("Memory"), mem_items))
+
+        for mod in mem_detail.get("modules") or []:
+            mod_items = [
+                (tr("Slot"), mod.get("slot")),
+                (tr("Manufacturer"), mod.get("manufacturer")),
+                (tr("Type"), mod.get("type")),
+                (tr("Capacity"), mod.get("capacity")),
+                (tr("Speed"), f"{mod['speed_mhz']} MHz" if mod.get("speed_mhz") else "N/A"),
+                (tr("Timing"), mod.get("timing") or "N/A"),
+                (tr("Part Number"), mod.get("part_number") or "N/A"),
+            ]
+            self._lay.addWidget(info_box(f"{tr('Modules')} · {mod.get('slot')}", mod_items))
+
+        for i, gpu in enumerate(snap.get("gpu", []), start=1):
+            gpu_items = [
+                (tr("Model"), gpu.get("name")),
+                (tr("Chip"), gpu.get("chip")),
+                (tr("Vendor"), gpu.get("vendor")),
+                (tr("VRAM"), gpu.get("vram") or "N/A"),
+                (tr("GPU Cores"), gpu.get("cores") or "N/A"),
+            ]
+            if gpu.get("apis"):
+                gpu_items.append((tr("API Support"), ", ".join(gpu["apis"])))
+            self._lay.addWidget(info_box(f"{tr('GPU')} {i}", gpu_items))
 
         disk_items = []
         for p in snap.get("disks", []):
             total = format_bytes(p["total_bytes"]) if p["total_bytes"] else "N/A"
             percent = f"{p['percent']}%" if p["percent"] is not None else "N/A"
-            disk_items.append((p["mountpoint"], f"{total} · 已用 {percent}"))
-        self._lay.addWidget(info_box("磁盘分区", disk_items or [("无", "N/A")]))
+            disk_items.append((p["mountpoint"], f"{total} · {tr('Used')} {percent}"))
+        self._lay.addWidget(info_box(tr("Partitions"), disk_items or [(tr("None"), "N/A")]))
+
+        for d in snap.get("disk_drives", []):
+            type_label = tr("SSD") if d.get("type") == "ssd" else (tr("HDD") if d.get("type") == "hdd" else d.get("type"))
+            health = tr("Good") if d.get("health") == "good" else (tr("Bad") if d.get("health") == "bad" else "N/A")
+            drive_items = [
+                (tr("Model"), d.get("model")),
+                (tr("Type"), type_label),
+                (tr("Protocol"), d.get("protocol") or "N/A"),
+                (tr("SMART Status"), d.get("smart_status") or "N/A"),
+                (tr("Health"), health),
+                (tr("Location"), tr("Internal") if d.get("is_internal") else tr("External")),
+            ]
+            if d.get("size_bytes"):
+                drive_items.append((tr("Capacity"), format_bytes(d["size_bytes"])))
+            self._lay.addWidget(info_box(f"{tr('Disk Drives')} · {d.get('model')}", drive_items))
 
         self._lay.addStretch(1)
         self.refresh_btn.setEnabled(True)
 
-        self.mark_pass(
-            "overview.cpu",
-            "CPU 信息",
-            cpu["brand"],
-            {"logical_cores": cpu["logical_cores"], "freq_max_mhz": cpu["freq_max_mhz"]},
-        )
-        self.mark_pass(
-            "overview.memory",
-            "内存信息",
-            f"总量 {format_bytes(mem['total_bytes'])}",
-            {"total_bytes": mem["total_bytes"]},
-        )
-        self.mark_pass(
-            "overview.disks",
-            "磁盘信息",
-            f"{len(snap.get('disks', []))} 个分区",
-            {"count": len(snap.get("disks", []))},
-        )
+        self.mark_pass("overview.cpu", "CPU", cpu["brand"], {"logical_cores": cpu["logical_cores"]})
+        self.mark_pass("overview.memory", "Memory", f"{format_bytes(mem['total_bytes'])}", {"total_bytes": mem["total_bytes"]})
+        self.mark_pass("overview.disks", "Disk Drives", f"{len(snap.get('disk_drives', []))}", {"drives": len(snap.get('disk_drives', []))})
+        self.mark_pass("overview.gpu", "GPU", f"{len(snap.get('gpu', []))}", {"gpus": len(snap.get('gpu', []))})

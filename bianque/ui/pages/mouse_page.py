@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import QLabel, QPushButton, QWidget
 
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 
 
@@ -56,7 +57,7 @@ class MouseTestArea(QWidget):
 
 class MousePage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("鼠标/触控板检测", "在下方区域点击左右键、滚动滚轮并移动光标", parent)
+        super().__init__("Mouse / Touchpad", "Click, scroll and move the pointer in the area below", parent)
 
         self.area = MouseTestArea()
         self.area.set_callback(self._refresh)
@@ -65,8 +66,8 @@ class MousePage(BasePage):
         self.info_lbl = QLabel()
         self.content.addWidget(self.info_lbl)
 
-        self.ok_btn = QPushButton("确认全部正常 ✓")
-        self.bad_btn = QPushButton("确认异常 ✗")
+        self.ok_btn = QPushButton(tr("Confirm OK ✓"))
+        self.bad_btn = QPushButton(tr("Confirm faulty ✗"))
         self.ok_btn.clicked.connect(self._confirm_ok)
         self.bad_btn.clicked.connect(self._confirm_bad)
         self.content.addWidget(self.ok_btn)
@@ -76,14 +77,14 @@ class MousePage(BasePage):
 
     def _refresh(self) -> None:
         a = self.area
-        left = "✓" if a.left else "未按"
-        middle = "✓" if a.middle else "未按"
-        right = "✓" if a.right else "未按"
-        moved = "✓" if a.moved else "未移动"
-        wheel = f"上{a.wheel_up} / 下{a.wheel_down}"
+        left = "✓" if a.left else tr("Not pressed")
+        middle = "✓" if a.middle else tr("Not pressed")
+        right = "✓" if a.right else tr("Not pressed")
+        moved = "✓" if a.moved else tr("Not pressed")
+        wheel = tr("up {0} / down {1}", a.wheel_up, a.wheel_down)
         self.info_lbl.setText(
-            f"左键：{left}    中键：{middle}    右键：{right}\n"
-            f"滚轮：{wheel}    移动：{moved}    坐标：({a._pos[0]}, {a._pos[1]})"
+            f"{tr('Left')}: {left}    {tr('Middle')}: {middle}    {tr('Right')}: {right}\n"
+            f"{tr('Wheel')}: {wheel}    {tr('Moved')}: {moved}    ({a._pos[0]:.0f}, {a._pos[1]:.0f})"
         )
 
     def _confirm_ok(self) -> None:
@@ -96,7 +97,7 @@ class MousePage(BasePage):
             "wheel_up": a.wheel_up,
             "wheel_down": a.wheel_down,
         }
-        self.mark_pass("mouse.buttons", "鼠标按键", "鼠标按键/滚轮/移动均正常", data)
+        self.mark_pass("mouse.buttons", "Mouse Buttons", tr("Mouse buttons/wheel/movement OK"), data)
 
     def _confirm_bad(self) -> None:
-        self.mark_fail("mouse.buttons", "鼠标按键", "已标记鼠标异常")
+        self.mark_fail("mouse.buttons", "Mouse Buttons", tr("Mouse marked faulty"))

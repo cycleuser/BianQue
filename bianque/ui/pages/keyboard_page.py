@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 
 _HIT_STYLE = "background: #16a34a; color: #fff; border: 1px solid #16a34a;"
@@ -69,7 +70,7 @@ class KeyButton(QPushButton):
 
 class KeyboardPage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("键盘检测", "逐个按下键盘上的键，下方按键会变绿；请确保每个键都被按下", parent)
+        super().__init__("Keyboard", "Press every key; pressed keys turn green", parent)
         self._buttons: list[KeyButton] = []
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -96,9 +97,9 @@ class KeyboardPage(BasePage):
         self.content.addWidget(self.unhit_lbl)
 
         btn_row = QHBoxLayout()
-        self.reset_btn = QPushButton("重置")
-        self.ok_btn = QPushButton("全部正常 ✓")
-        self.bad_btn = QPushButton("有按键失灵 ✗")
+        self.reset_btn = QPushButton(tr("Reset"))
+        self.ok_btn = QPushButton(tr("All OK ✓"))
+        self.bad_btn = QPushButton(tr("Faulty key ✗"))
         self.reset_btn.clicked.connect(self._reset)
         self.ok_btn.clicked.connect(self._confirm_ok)
         self.bad_btn.clicked.connect(self._confirm_bad)
@@ -118,21 +119,27 @@ class KeyboardPage(BasePage):
     def _update_progress(self) -> None:
         hit = sum(1 for b in self._buttons if b.is_hit)
         total = len(self._buttons)
-        self.progress_lbl.setText(f"已测 {hit} / {total} 键")
+        self.progress_lbl.setText(tr("Tested {0} / {1} keys", hit, total))
         unhit = [b.text() for b in self._buttons if not b.is_hit]
         if unhit:
-            self.unhit_lbl.setText("未测：" + "  ".join(unhit))
+            self.unhit_lbl.setText(f"{tr('Untested')}: " + "  ".join(unhit))
         else:
-            self.unhit_lbl.setText("所有键均已按下 ✓")
+            self.unhit_lbl.setText(tr("All keys pressed ✓"))
 
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
         text = event.text().lower()
         key = event.key()
+        if key == Qt.Key.Key_Backtab:
+            key = Qt.Key.Key_Tab
         for btn in self._buttons:
             if not btn.is_hit and btn.matches(key, text):
                 btn.mark_hit()
         self._update_progress()
         event.accept()
+
+    def focusNextPrevChild(self, next_child: bool) -> bool:  # noqa: N802
+        # Tab / Shift+Tab must be treated as keys under test, not focus navigation.
+        return False
 
     def _reset(self) -> None:
         for btn in self._buttons:
@@ -143,11 +150,11 @@ class KeyboardPage(BasePage):
     def _confirm_ok(self) -> None:
         hit = sum(1 for b in self._buttons if b.is_hit)
         total = len(self._buttons)
-        self.mark_pass("keyboard.keys", "键盘按键", f"已确认 {hit}/{total} 键正常", {"tested": hit, "total": total})
+        self.mark_pass("keyboard.keys", "Keyboard Keys", tr("Confirmed {0}/{1} keys OK", hit, total), {"tested": hit, "total": total})
 
     def _confirm_bad(self) -> None:
         unhit = [b.text() for b in self._buttons if not b.is_hit]
-        self.mark_fail("keyboard.keys", "键盘按键", f"以下按键疑似失灵：{' '.join(unhit)}", {"unhit": unhit})
+        self.mark_fail("keyboard.keys", "Keyboard Keys", tr("Keys likely faulty: {0}", " ".join(unhit)), {"unhit": unhit})
 
     def showEvent(self, event) -> None:  # noqa: N802
         self.setFocus()

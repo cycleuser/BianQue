@@ -16,18 +16,31 @@ inquire (hardware info), palpate (thermal stress).
 | Check | Detail |
 |-------|--------|
 | Overview | CPU / memory / disk / GPU / board auto-discovery |
-| Screen | resolution · refresh · DPI + full-screen 6-colour dead-pixel test |
+| Screen | resolution · refresh · DPI + full-screen 6-colour dead-pixel test (drifting hint) |
 | Camera | live preview + snapshot capture |
 | Microphone | live level meter + record/playback |
 | Speaker | independent L/R channel + frequency sweep |
-| Keyboard | full-key test (virtual keyboard lights up) |
+| Keyboard | full-key test incl. Tab (virtual keyboard lights up) |
 | Mouse | left/middle/right, wheel, movement |
 | Thermal | CPU stress + frequency / temperature / throttling watch |
 | Battery | charge, cycle count, health |
-| Disk | partitions + sequential read/write benchmark |
-| Memory | capacity/speed info + write/read self-test |
+| Disk | SSD/HDD detection + SMART health + sequential benchmark |
+| Memory | per-module timing/channel/bandwidth + write/read self-test |
 | Network | interfaces + ICMP latency / packet loss |
 | Report | export HTML / Markdown / JSON |
+
+### Deep hardware collection
+
+- **CPU**: physical/logical cores, per-core usage, L1/L2/L3 cache, Apple Silicon P/E core split
+- **Memory**: per-module manufacturer/type/capacity/speed(timing)/part number, channel count, theoretical bandwidth
+- **GPU**: chip model, vendor, VRAM, core count, supported graphics APIs (e.g. Metal 4)
+- **Disk**: SSD/HDD detection, protocol (NVMe/SATA/USB), SMART health status
+
+### i18n
+
+Full UI translation in **10 languages**, switched live from the menu bar:
+
+简体中文 · English · 日本語 · Français · Русский · Deutsch · Português · Español · 한국어 · Italiano
 
 ## Install
 

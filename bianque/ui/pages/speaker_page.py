@@ -15,37 +15,38 @@ from PySide6.QtWidgets import (
 )
 
 from bianque.core import audio as audio_core
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 
 
 class SpeakerPage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("扬声器检测", "分别播放左右声道与扫频信号，确认扬声器正常", parent)
+        super().__init__("Speaker", "Play left/right channels and a sweep tone", parent)
         self._effect: QSoundEffect | None = None
 
-        self.content.addWidget(QLabel("点击播放测试音，注意区分左右声道："))
+        self.content.addWidget(QLabel(tr("Click to play test tones; note left/right:")))
 
         row1 = QHBoxLayout()
-        for label, pan in (("左声道", "left"), ("右声道", "right"), ("双声道", "both")):
-            btn = QPushButton(f"▶ {label}")
+        for label, pan in (("Left Channel", "left"), ("Right Channel", "right"), ("Both Channels", "both")):
+            btn = QPushButton(f"▶ {tr(label)}")
             btn.clicked.connect(lambda _=False, p=pan: self._play_tone(440.0, p))
             row1.addWidget(btn)
-        sweep_btn = QPushButton("▶ 扫频（低频→高频）")
+        sweep_btn = QPushButton(f"▶ {tr('Sweep (low→high)')}")
         sweep_btn.clicked.connect(self._play_sweep)
         row1.addWidget(sweep_btn)
         row1.addStretch(1)
         self.content.addLayout(row1)
 
-        self.content.addWidget(QLabel("声道确认："))
+        self.content.addWidget(QLabel(tr("Channel confirmation:")))
         row2 = QHBoxLayout()
-        self.left_ok = QPushButton("左声道正常 ✓")
-        self.left_bad = QPushButton("左声道无声 ✗")
-        self.right_ok = QPushButton("右声道正常 ✓")
-        self.right_bad = QPushButton("右声道无声 ✗")
-        self.left_ok.clicked.connect(lambda: self._confirm("speaker.left", "左声道", True))
-        self.left_bad.clicked.connect(lambda: self._confirm("speaker.left", "左声道", False))
-        self.right_ok.clicked.connect(lambda: self._confirm("speaker.right", "右声道", True))
-        self.right_bad.clicked.connect(lambda: self._confirm("speaker.right", "右声道", False))
+        self.left_ok = QPushButton(tr("Left OK ✓"))
+        self.left_bad = QPushButton(tr("Left silent ✗"))
+        self.right_ok = QPushButton(tr("Right OK ✓"))
+        self.right_bad = QPushButton(tr("Right silent ✗"))
+        self.left_ok.clicked.connect(lambda: self._confirm("speaker.left", "Left Channel", True))
+        self.left_bad.clicked.connect(lambda: self._confirm("speaker.left", "Left Channel", False))
+        self.right_ok.clicked.connect(lambda: self._confirm("speaker.right", "Right Channel", True))
+        self.right_bad.clicked.connect(lambda: self._confirm("speaker.right", "Right Channel", False))
         row2.addWidget(self.left_ok)
         row2.addWidget(self.left_bad)
         row2.addWidget(self.right_ok)
@@ -73,18 +74,19 @@ class SpeakerPage(BasePage):
         self._effect.setSource(QUrl.fromLocalFile(path))
         self._effect.setVolume(1.0)
         self._effect.play()
-        self.status_lbl.setText(f"正在播放：{label}")
+        self.status_lbl.setText(f"{tr('Playing')}: {label}")
 
     def _play_tone(self, freq: float, pan: str) -> None:
-        self._play(self._stereo(freq, pan), f"{pan} {freq:.0f}Hz")
+        label = {"left": "Left Channel", "right": "Right Channel", "both": "Both Channels"}[pan]
+        self._play(self._stereo(freq, pan), f"{tr(label)} {freq:.0f}Hz")
 
     def _play_sweep(self) -> None:
-        self._play(audio_core.generate_sweep(duration=2.0), "扫频信号")
+        self._play(audio_core.generate_sweep(duration=2.0), tr("Sweep (low→high)"))
 
     def _confirm(self, key: str, name: str, ok: bool) -> None:
         if ok:
-            self.mark_pass(key, name, f"{name}正常")
-            self.status_lbl.setText(f"{name}已确认正常 ✓")
+            self.mark_pass(key, name, f"{tr(name)} {tr('OK')}")
+            self.status_lbl.setText(f"{tr(name)} {tr('Confirmed OK ✓')}")
         else:
-            self.mark_fail(key, name, f"{name}无声")
-            self.status_lbl.setText(f"{name}已标记异常 ✗")
+            self.mark_fail(key, name, f"{tr(name)} {tr('silent')}")
+            self.status_lbl.setText(f"{tr(name)} {tr('marked faulty ✗')}")

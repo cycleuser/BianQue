@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from bianque.core.models import CheckResult, Status
+from bianque.i18n import tr
 
 
 class BasePage(QWidget):
@@ -19,7 +20,7 @@ class BasePage(QWidget):
 
     def __init__(self, title: str, subtitle: str = "", parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.page_title = title
+        self.page_title = tr(title)
         self._result_cb: Callable[[CheckResult], None] | None = None
 
         root = QVBoxLayout(self)
@@ -30,9 +31,9 @@ class BasePage(QWidget):
         header.setObjectName("header")
         header_layout = QVBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 12)
-        title_lbl = QLabel(title)
+        title_lbl = QLabel(tr(title))
         title_lbl.setObjectName("title")
-        self.subtitle_lbl = QLabel(subtitle)
+        self.subtitle_lbl = QLabel(tr(subtitle))
         self.subtitle_lbl.setObjectName("subtitle")
         self.subtitle_lbl.setWordWrap(True)
         header_layout.addWidget(title_lbl)

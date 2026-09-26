@@ -14,12 +14,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 
 
 class CameraPage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("摄像头检测", "预览摄像头画面并拍照，确认成像正常", parent)
+        super().__init__("Camera", "Preview the camera and take a snapshot", parent)
         self._camera: QCamera | None = None
         self._session: QMediaCaptureSession | None = None
         self._capture: QImageCapture | None = None
@@ -36,10 +37,10 @@ class CameraPage(BasePage):
         self.content.addWidget(self.video_widget, stretch=1)
 
         btn_row = QHBoxLayout()
-        self.start_btn = QPushButton("开始预览")
-        self.stop_btn = QPushButton("停止预览")
-        self.snap_btn = QPushButton("拍照")
-        self.ok_btn = QPushButton("画面正常 ✓")
+        self.start_btn = QPushButton(tr("Start Preview"))
+        self.stop_btn = QPushButton(tr("Stop Preview"))
+        self.snap_btn = QPushButton(tr("Snapshot"))
+        self.ok_btn = QPushButton(tr("Picture OK ✓"))
         self.start_btn.clicked.connect(self._start)
         self.stop_btn.clicked.connect(self._stop)
         self.snap_btn.clicked.connect(self._snap)
@@ -59,8 +60,8 @@ class CameraPage(BasePage):
 
         if not devices:
             self.start_btn.setEnabled(False)
-            self.mark_unknown("camera.device", "摄像头", "未检测到摄像头设备")
-            self.status_lbl.setText("未检测到摄像头设备")
+            self.mark_unknown("camera.device", "Camera", "No camera detected")
+            self.status_lbl.setText(tr("No camera detected"))
 
     def _start(self) -> None:
         try:
@@ -77,11 +78,11 @@ class CameraPage(BasePage):
             self.start_btn.setEnabled(False)
             self.stop_btn.setEnabled(True)
             self.snap_btn.setEnabled(True)
-            self.status_lbl.setText("预览中…")
-            self.mark_pass("camera.device", "摄像头", f"已打开 {device.description()}")
+            self.status_lbl.setText(tr("Previewing…"))
+            self.mark_pass("camera.device", "Camera", f"{tr('Opened')} {device.description()}")
         except Exception as exc:  # noqa: BLE001
-            self.status_lbl.setText(f"打开失败：{exc}")
-            self.mark_fail("camera.device", "摄像头", f"打开失败：{exc}")
+            self.status_lbl.setText(f"{tr('Failed to open')}: {exc}")
+            self.mark_fail("camera.device", "Camera", f"{tr('Failed to open')}: {exc}")
 
     def _stop(self) -> None:
         if self._camera is not None:
@@ -89,7 +90,7 @@ class CameraPage(BasePage):
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.snap_btn.setEnabled(False)
-        self.status_lbl.setText("已停止")
+        self.status_lbl.setText(tr("Stopped"))
 
     def _snap(self) -> None:
         if self._capture is None:
@@ -99,12 +100,12 @@ class CameraPage(BasePage):
 
     def _on_image_saved(self, _id: int, path: str) -> None:
         self._snap_path = path
-        self.status_lbl.setText(f"拍照成功：{path}")
+        self.status_lbl.setText(f"{tr('Snapshot saved')}: {path}")
         self.ok_btn.setEnabled(True)
 
     def _confirm_ok(self) -> None:
-        self.mark_pass("camera.image", "摄像头成像", "画面正常，拍照成功", {"snap_path": self._snap_path})
-        self.status_lbl.setText("已确认摄像头正常 ✓")
+        self.mark_pass("camera.image", "Camera Image", "Image OK", {"snap_path": self._snap_path})
+        self.status_lbl.setText(tr("Confirmed OK ✓"))
 
     def hideEvent(self, event) -> None:  # noqa: N802
         self._stop()

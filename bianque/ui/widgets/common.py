@@ -16,18 +16,19 @@ from PySide6.QtWidgets import (
 )
 
 from bianque.core.models import Status
+from bianque.i18n import tr
 
 _STATUS_STYLE = {
-    Status.PASS: ("status-pass", "通过"),
-    Status.FAIL: ("status-fail", "失败"),
-    Status.UNKNOWN: ("status-unknown", "未知"),
-    Status.SKIPPED: ("status-skipped", "跳过"),
+    Status.PASS: ("status-pass", "Pass"),
+    Status.FAIL: ("status-fail", "Fail"),
+    Status.UNKNOWN: ("status-unknown", "Unknown"),
+    Status.SKIPPED: ("status-skipped", "Skipped"),
 }
 
 
 def status_label(status: str) -> QLabel:
     objname, text = _STATUS_STYLE.get(status, ("status-unknown", status))
-    label = QLabel(text)
+    label = QLabel(tr(text))
     label.setObjectName(objname)
     return label
 

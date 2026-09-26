@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from bianque.core import audio as audio_core
+from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 from bianque.ui.widgets.common import LevelMeter
 from bianque.ui.worker import Task
@@ -27,7 +28,7 @@ SAMPLE_RATE = 44100
 
 class MicrophonePage(BasePage):
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("麦克风检测", "对麦克风说话，观察电平变化；可录音回放确认", parent)
+        super().__init__("Microphone", "Speak into the mic and watch the level meter", parent)
         self._stream: Any = None
         self._q: queue.Queue[float] = queue.Queue()
         self._peak = 0.0
@@ -44,10 +45,10 @@ class MicrophonePage(BasePage):
         self.content.addWidget(self.meter)
 
         btn_row = QHBoxLayout()
-        self.start_btn = QPushButton("开始监听")
-        self.stop_btn = QPushButton("停止监听")
-        self.rec_btn = QPushButton("录音 3 秒并回放")
-        self.ok_btn = QPushButton("确认正常 ✓")
+        self.start_btn = QPushButton(tr("Start Listening"))
+        self.stop_btn = QPushButton(tr("Stop Listening"))
+        self.rec_btn = QPushButton(tr("Record 3s & Playback"))
+        self.ok_btn = QPushButton(tr("Confirm OK ✓"))
         self.start_btn.clicked.connect(self._start)
         self.stop_btn.clicked.connect(self._stop)
         self.rec_btn.clicked.connect(self._record)
@@ -72,8 +73,8 @@ class MicrophonePage(BasePage):
 
         if not devices["available"] or not devices["inputs"]:
             self.start_btn.setEnabled(False)
-            self.mark_unknown("microphone.device", "麦克风", "未检测到麦克风输入设备")
-            self.status_lbl.setText("未检测到麦克风输入设备")
+            self.mark_unknown("microphone.device", "Microphone", "No microphone input detected")
+            self.status_lbl.setText(tr("No microphone input detected"))
 
     def _start(self) -> None:
         try:
@@ -90,11 +91,11 @@ class MicrophonePage(BasePage):
             self.stop_btn.setEnabled(True)
             self.rec_btn.setEnabled(True)
             self.ok_btn.setEnabled(True)
-            self.status_lbl.setText("监听中… 请对麦克风说话")
-            self.mark_pass("microphone.device", "麦克风", "已打开输入设备")
+            self.status_lbl.setText(tr("Listening… speak into the mic"))
+            self.mark_pass("microphone.device", "Microphone", "Input device opened")
         except Exception as exc:  # noqa: BLE001
-            self.status_lbl.setText(f"打开失败：{exc}")
-            self.mark_fail("microphone.device", "麦克风", f"打开失败：{exc}")
+            self.status_lbl.setText(f"{tr('Failed to open')}: {exc}")
+            self.mark_fail("microphone.device", "Microphone", f"{tr('Failed to open')}: {exc}")
 
     def _poll(self) -> None:
         level = 0.0
@@ -115,20 +116,20 @@ class MicrophonePage(BasePage):
                 self._stream.close()
             except Exception:  # noqa: BLE001
                 pass
-        self._stream = None
+            self._stream = None
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.meter.reset()
-        self.status_lbl.setText("已停止监听")
+        self.status_lbl.setText(tr("Stopped"))
 
     def _record(self) -> None:
         if self._task is not None and self._task.is_running():
             return
         self.rec_btn.setEnabled(False)
-        self.status_lbl.setText("正在录音 3 秒…")
+        self.status_lbl.setText(tr("Recording 3s…"))
         self._task = Task(self._record_fn)
         self._task.signals.finished.connect(self._on_recorded)
-        self._task.signals.error.connect(lambda e: self.status_lbl.setText(f"录音失败：{e}"))
+        self._task.signals.error.connect(lambda e: self.status_lbl.setText(f"{tr('Recording failed')}: {e}"))
         self._task.start()
 
     def _record_fn(self, progress, stop_event) -> str:
@@ -143,7 +144,7 @@ class MicrophonePage(BasePage):
 
     def _on_recorded(self, path: str) -> None:
         self.rec_btn.setEnabled(True)
-        self.status_lbl.setText(f"录音完成，正在回放：{path}")
+        self.status_lbl.setText(f"{tr('Recorded, playing back')}: {path}")
         self._effect = QSoundEffect(self)
         self._effect.setSource(QUrl.fromLocalFile(path))
         self._effect.setVolume(1.0)
@@ -151,13 +152,9 @@ class MicrophonePage(BasePage):
 
     def _confirm(self) -> None:
         heard = self._peak > 0.05
-        self.mark_pass(
-            "microphone.audio",
-            "麦克风收音",
-            f"采集到语音信号（峰值 {self._peak:.2f}）" if heard else "已确认麦克风正常",
-            {"peak_level": round(self._peak, 3)},
-        )
-        self.status_lbl.setText("已确认麦克风正常 ✓")
+        message = tr("Captured voice signal (peak {0})").format(round(self._peak, 2)) if heard else tr("Confirmed OK ✓")
+        self.mark_pass("microphone.audio", "Microphone Input", message, {"peak_level": round(self._peak, 3)})
+        self.status_lbl.setText(tr("Confirmed OK ✓"))
 
     def hideEvent(self, event) -> None:  # noqa: N802
         self._stop()
