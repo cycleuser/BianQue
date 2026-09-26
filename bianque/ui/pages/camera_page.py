@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from bianque.core import permission
 from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 
@@ -55,6 +56,11 @@ class CameraPage(BasePage):
         btn_row.addWidget(self.ok_btn)
         self.content.addLayout(btn_row)
 
+        self.settings_btn = QPushButton(tr("Open System Settings"))
+        self.settings_btn.clicked.connect(lambda: permission.open_privacy_settings("video"))
+        self.settings_btn.hide()
+        self.content.addWidget(self.settings_btn)
+
         self.status_lbl = QLabel("")
         self.content.addWidget(self.status_lbl)
 
@@ -62,8 +68,35 @@ class CameraPage(BasePage):
             self.start_btn.setEnabled(False)
             self.mark_unknown("camera.device", "Camera", "No camera detected")
             self.status_lbl.setText(tr("No camera detected"))
+        else:
+            self._update_permission_hint()
+
+    def _update_permission_hint(self) -> None:
+        status = permission.check_camera_permission()
+        if status == permission.STATUS_DENIED:
+            self.status_lbl.setText(tr("Camera permission denied. Enable it in System Settings."))
+            self.settings_btn.show()
+        elif status == permission.STATUS_RESTRICTED:
+            self.status_lbl.setText(tr("Camera access is restricted."))
+        elif status == permission.STATUS_NOT_DETERMINED:
+            self.status_lbl.setText(tr("Camera permission not granted yet. Click Start Preview to allow access."))
 
     def _start(self) -> None:
+        status = permission.check_camera_permission()
+        if status in (permission.STATUS_DENIED, permission.STATUS_RESTRICTED):
+            self.status_lbl.setText(tr("Camera permission denied. Enable it in System Settings."))
+            self.settings_btn.show()
+            self.mark_fail("camera.device", "Camera", "Camera permission denied")
+            return
+        if status == permission.STATUS_NOT_DETERMINED:
+            self.status_lbl.setText(tr("Requesting camera permission…"))
+            if not permission.request_camera_permission():
+                self.status_lbl.setText(tr("Camera permission denied. Enable it in System Settings."))
+                self.settings_btn.show()
+                self.mark_fail("camera.device", "Camera", "Camera permission denied")
+                return
+            self.settings_btn.hide()
+
         try:
             devices = QMediaDevices.videoInputs()
             device = devices[self.combo.currentIndex()]
@@ -84,12 +117,15 @@ class CameraPage(BasePage):
             self.status_lbl.setText(f"{tr('Failed to open')}: {exc}")
             self.mark_fail("camera.device", "Camera", f"{tr('Failed to open')}: {exc}")
 
-    def _stop(self) -> None:
+    def _release(self) -> None:
         if self._camera is not None:
             self._camera.stop()
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.snap_btn.setEnabled(False)
+
+    def _stop(self) -> None:
+        self._release()
         self.status_lbl.setText(tr("Stopped"))
 
     def _snap(self) -> None:
@@ -108,5 +144,10 @@ class CameraPage(BasePage):
         self.status_lbl.setText(tr("Confirmed OK ✓"))
 
     def hideEvent(self, event) -> None:  # noqa: N802
-        self._stop()
+        self._release()
         super().hideEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        if self._camera is None:
+            self._update_permission_hint()
+        super().showEvent(event)

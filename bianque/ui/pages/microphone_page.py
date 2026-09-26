@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from bianque.core import audio as audio_core
+from bianque.core import permission
 from bianque.i18n import tr
 from bianque.ui.pages.base import BasePage
 from bianque.ui.widgets.common import LevelMeter
@@ -67,6 +68,11 @@ class MicrophonePage(BasePage):
         self.content.addWidget(self.status_lbl)
         self.content.addStretch(1)
 
+        self.settings_btn = QPushButton(tr("Open System Settings"))
+        self.settings_btn.clicked.connect(lambda: permission.open_privacy_settings("audio"))
+        self.settings_btn.hide()
+        self.content.addWidget(self.settings_btn)
+
         self._timer = QTimer(self)
         self._timer.setInterval(40)
         self._timer.timeout.connect(self._poll)
@@ -75,8 +81,33 @@ class MicrophonePage(BasePage):
             self.start_btn.setEnabled(False)
             self.mark_unknown("microphone.device", "Microphone", "No microphone input detected")
             self.status_lbl.setText(tr("No microphone input detected"))
+        else:
+            self._update_permission_hint()
+
+    def _update_permission_hint(self) -> None:
+        status = permission.check_microphone_permission()
+        if status == permission.STATUS_DENIED:
+            self.status_lbl.setText(tr("Microphone permission denied. Enable it in System Settings."))
+            self.settings_btn.show()
+        elif status == permission.STATUS_NOT_DETERMINED:
+            self.status_lbl.setText(tr("Microphone permission not granted yet. Click Start Listening to allow access."))
 
     def _start(self) -> None:
+        status = permission.check_microphone_permission()
+        if status in (permission.STATUS_DENIED, permission.STATUS_RESTRICTED):
+            self.status_lbl.setText(tr("Microphone permission denied. Enable it in System Settings."))
+            self.settings_btn.show()
+            self.mark_fail("microphone.device", "Microphone", "Microphone permission denied")
+            return
+        if status == permission.STATUS_NOT_DETERMINED:
+            self.status_lbl.setText(tr("Requesting microphone permission…"))
+            if not permission.request_microphone_permission():
+                self.status_lbl.setText(tr("Microphone permission denied. Enable it in System Settings."))
+                self.settings_btn.show()
+                self.mark_fail("microphone.device", "Microphone", "Microphone permission denied")
+                return
+            self.settings_btn.hide()
+
         try:
             import sounddevice as sd  # type: ignore
 
@@ -108,7 +139,7 @@ class MicrophonePage(BasePage):
             self._peak = max(self._peak, level)
             self.meter.set_level(level)
 
-    def _stop(self) -> None:
+    def _release(self) -> None:
         self._timer.stop()
         if self._stream is not None:
             try:
@@ -120,6 +151,9 @@ class MicrophonePage(BasePage):
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.meter.reset()
+
+    def _stop(self) -> None:
+        self._release()
         self.status_lbl.setText(tr("Stopped"))
 
     def _record(self) -> None:
@@ -157,5 +191,10 @@ class MicrophonePage(BasePage):
         self.status_lbl.setText(tr("Confirmed OK ✓"))
 
     def hideEvent(self, event) -> None:  # noqa: N802
-        self._stop()
+        self._release()
         super().hideEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        if self._stream is None:
+            self._update_permission_hint()
+        super().showEvent(event)
